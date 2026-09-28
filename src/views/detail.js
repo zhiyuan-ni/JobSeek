@@ -2,7 +2,7 @@
 import * as actions from '../actions.js';
 import { fileUrl } from '../api.js';
 import * as store from '../store.js';
-import { currentRound, roundLabel, roundType } from '../model/application.js';
+import { currentRound, lastProgressDate, roundLabel, roundType, staleDays } from '../model/application.js';
 import {
   CATEGORIES,
   CHANNELS,
@@ -18,7 +18,7 @@ import {
 import { h, options, patchChildren, selectEl } from '../ui/dom.js';
 import { promptText, showMenu } from '../ui/dialogs.js';
 import { field, iconBtn, roundTypeMenu } from '../ui/widgets.js';
-import { fmtDateTime, fmtSize, fmtTimestamp, normalizeUrl, safeUrl, splitList } from '../utils/format.js';
+import { fmtDate, fmtDateTime, fmtSize, fmtTimestamp, normalizeUrl, safeUrl, splitList } from '../utils/format.js';
 
 let panel = null;
 
@@ -78,6 +78,7 @@ function render() {
   patchChildren(
     panel.body,
     renderHeader(app),
+    renderStaleNotice(app),
     section('基本信息', renderBasics(app)),
     section('简历与 JD', renderAttachments(app)),
     section('流程', renderRounds(app), '节点标为「已约 / 待结果 / 通过」时，卡片会自动前移到对应列'),
@@ -127,6 +128,30 @@ function renderHeader(app) {
           `当前：${roundLabel(round)} · ${nameOf(ROUND_STATUSES, round.status)}`,
           round.scheduledAt && ` · ${fmtDateTime(round.scheduledAt)}`,
         ),
+    ),
+  );
+}
+
+// 很久没动静时给出下一步：查进度、继续等（重新计时）、或者干脆标为无回音
+function renderStaleNotice(app) {
+  const days = staleDays(app);
+  if (days == null) return null;
+  const portal = safeUrl(app.portalUrl);
+  return h(
+    'div',
+    { class: 'stale-notice', role: 'status' },
+    h(
+      'div',
+      { class: 'stale-text' },
+      h('b', null, `${nameOf(COLUMNS, app.phase)}阶段已经 ${days} 天没有进展`),
+      h('span', null, `最近一次进展在 ${fmtDate(lastProgressDate(app))}。可以去校招官网查一下进度，或者问问 HR。`),
+    ),
+    h(
+      'div',
+      { class: 'stale-actions' },
+      portal && h('a', { class: 'btn btn-small', href: portal, target: '_blank', rel: 'noopener noreferrer' }, '去官网查进度'),
+      h('button', { type: 'button', class: 'btn btn-small', title: '还在流程里，重新开始计时', onclick: () => actions.keepWaiting(app.id) }, '继续等'),
+      h('button', { type: 'button', class: 'btn btn-small btn-danger-ghost', onclick: () => actions.closeApp(app.id, 'ghosted') }, '标为无回音'),
     ),
   );
 }

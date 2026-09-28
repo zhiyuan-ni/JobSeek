@@ -1,8 +1,18 @@
 import * as actions from '../actions.js';
 import * as store from '../store.js';
 import { buildAgenda } from '../model/agenda.js';
-import { currentRound, reachedIndex, roundLabel } from '../model/application.js';
-import { CATEGORIES, COLUMNS, OUTCOMES, PRIORITIES, ROUND_STATUSES, WISHES, columnIndex, nameOf } from '../model/constants.js';
+import { currentRound, reachedIndex, roundLabel, staleDays } from '../model/application.js';
+import {
+  CATEGORIES,
+  COLUMNS,
+  OUTCOMES,
+  PRIORITIES,
+  ROUND_STATUSES,
+  STALE_DAYS,
+  WISHES,
+  columnIndex,
+  nameOf,
+} from '../model/constants.js';
 import { h, options, patchChildren, selectEl } from '../ui/dom.js';
 import { daysUntil, fmtDate, fmtDateTime, hoursUntil } from '../utils/format.js';
 import { renderAgenda } from './agenda.js';
@@ -11,17 +21,18 @@ import { openNewAppModal } from './newApp.js';
 
 const FILTER_KEY = 'jobseek.boardFilters';
 const DRAG_TYPE = 'application/x-jobseek-app';
-const DEFAULT_FILTERS = { q: '', category: '', priority: '', resumeId: '', collapseClosed: false, collapseAgenda: false };
+const DEFAULT_FILTERS = { q: '', category: '', priority: '', resumeId: '', collapseClosed: false, collapseAgenda: false, staleOnly: false };
 
 function loadFilters() {
   try {
-    return { ...DEFAULT_FILTERS, ...JSON.parse(localStorage.getItem(FILTER_KEY) ?? '{}') };
+    return { ...DEFAULT_FILTERS, ...JSON.parse(localStorage.getItem(FILTER_KEY) ?? '{}'), staleOnly: false };
   } catch {
     return { ...DEFAULT_FILTERS };
   }
 }
 
-function saveFilters(filters) {
+// 「只看没动静」是临时的排查模式，不记住，免得下次打开看板只剩几张卡片
+function saveFilters({ staleOnly, ...filters }) {
   try {
     localStorage.setItem(FILTER_KEY, JSON.stringify(filters));
   } catch {}
@@ -42,7 +53,7 @@ export function mountBoard(root) {
   function render() {
     const all = store.getState().applications;
     const apps = all.filter((a) => matches(a, filters));
-    patchChildren(stats, renderStats(apps));
+    patchChildren(stats, renderStats(apps, filters, setFilter));
     // 提醒不受筛选影响，免得筛掉了就漏看
     patchChildren(
       agenda,
@@ -75,6 +86,7 @@ function matches(app, f) {
   if (f.category && app.category !== f.category) return false;
   if (f.priority && app.priority !== Number(f.priority)) return false;
   if (f.resumeId && app.resumeId !== f.resumeId) return false;
+  if (f.staleOnly && staleDays(app) == null) return false;
   const q = f.q.trim().toLowerCase();
   if (!q) return true;
   return [app.company, app.position, app.notes, app.cities.join(' '), ...app.rounds.map((r) => r.note)].some((t) =>
@@ -112,7 +124,7 @@ function renderToolbar(filters, setFilter) {
   );
 }
 
-function renderStats(apps) {
+function renderStats(apps, filters, setFilter) {
   const reached = apps.map(reachedIndex);
   const atLeast = (col) => reached.filter((i) => i >= columnIndex(col)).length;
   const applied = atLeast('applied');
@@ -129,7 +141,28 @@ function renderStats(apps) {
     stat('进行中', active),
     stat('进入面试', interviewed, rate(interviewed)),
     stat('Offer', offers, rate(offers)),
+    renderStaleToggle(apps.filter((a) => staleDays(a) != null).length, filters, setFilter),
   ];
+}
+
+function renderStaleToggle(count, filters, setFilter) {
+  const on = filters.staleOnly;
+  const limits = COLUMNS.filter((c) => STALE_DAYS[c.id])
+    .map((c) => `${c.name} ${STALE_DAYS[c.id]} 天`)
+    .join('、');
+  return h(
+    'button',
+    {
+      type: 'button',
+      class: ['stat', 'stat-toggle', count > 0 && 'stat-warn', on && 'active'],
+      'aria-pressed': String(on),
+      title: on ? '显示全部投递' : `只看很久没有进展的投递（${limits}）`,
+      onclick: () => setFilter({ staleOnly: !on }),
+    },
+    h('span', { class: 'stat-value' }, count),
+    h('span', { class: 'stat-label' }, '没动静'),
+    on && h('span', { class: 'stat-hint' }, '只看这些 ✕'),
+  );
 }
 
 function renderColumn(col, apps, filters, setFilter) {
@@ -257,6 +290,11 @@ function renderTags(app, resume) {
   }
   if (app.phase === 'closed' && app.outcome) {
     tags.push(h('span', { class: ['tag', `tag-outcome-${app.outcome}`] }, nameOf(OUTCOMES, app.outcome)));
+  }
+  const stale = staleDays(app);
+  if (stale != null) {
+    const title = `${nameOf(COLUMNS, app.phase)}阶段已经 ${stale} 天没有进展（超过 ${STALE_DAYS[app.phase]} 天就会标出来）`;
+    tags.push(h('span', { class: 'tag tag-stale', title }, `${stale} 天没动静`));
   }
   if (app.wish) tags.push(h('span', { class: 'tag' }, nameOf(WISHES, app.wish)));
   if (resume) tags.push(h('span', { class: 'tag tag-resume', title: '简历版本' }, resume.name));

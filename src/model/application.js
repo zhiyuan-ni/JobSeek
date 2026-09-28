@@ -1,5 +1,5 @@
-import { COLUMNS, ROUND_TYPES, columnIndex } from './constants.js';
-import { today } from '../utils/format.js';
+import { COLUMNS, ROUND_TYPES, STALE_DAYS, columnIndex } from './constants.js';
+import { daysBetween, today } from '../utils/format.js';
 
 export const uid = () => crypto.randomUUID();
 export const now = () => new Date().toISOString();
@@ -59,6 +59,7 @@ export function newApplication(fields = {}) {
     closedFrom: null,
     rounds: [],
     notes: '',
+    lastActivityAt: '', // 最近一次有进展的时间，用来判断「没动静」
     createdAt: t,
     updatedAt: t,
     ...fields,
@@ -93,6 +94,23 @@ export function reachedIndex(app) {
   return idx;
 }
 
+// 最近进展的日期：投递日期和最近一次进展里较晚的那个。
+// 补录很早以前投的岗位时，按填的投递日期算，而不是录入那天
+export function lastProgressDate(app) {
+  const dates = [app.appliedAt, app.lastActivityAt && today(new Date(app.lastActivityAt))].filter(Boolean).sort();
+  return dates.at(-1) ?? today(new Date(app.createdAt));
+}
+
+// 没动静的天数；不算没动静时返回 null
+export function staleDays(app, now = new Date()) {
+  const limit = STALE_DAYS[app.phase];
+  if (!limit) return null;
+  // 有排了时间还没结果的轮次：要么还没到，要么该自己更新结果了（日程面板会提醒），都不算干等
+  if (app.rounds.some((r) => r.scheduledAt && (r.status === 'pending' || r.status === 'scheduled'))) return null;
+  const days = daysBetween(lastProgressDate(app), today(now));
+  return days >= limit ? days : null;
+}
+
 // 节点有进展时，卡片自动前移到该节点所属列（只前移，不后退）
 export function syncPhaseFromRounds(app) {
   if (app.phase === 'closed') return;
@@ -112,6 +130,8 @@ export function moveApp(app, column, outcome = null) {
     return;
   }
   const reopening = app.phase === 'closed';
+  // 从「待投递」移出来是自己投了，投递日期已经记下；其余移动都算有进展
+  if (app.phase !== 'todo') app.lastActivityAt = now();
   app.outcome = null;
   app.closedFrom = null;
   if (!reopening) return advanceTo(app, column);

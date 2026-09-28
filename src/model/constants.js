@@ -30,6 +30,9 @@ export const ROUND_TYPES = [
   { id: 'custom', name: '自定义', column: null },
 ];
 
+// 各列多少天没有进展算「没动静」；不在这里的列（待投递、Offer、已结束）不判断
+export const STALE_DAYS = { applied: 14, test: 10, interview: 7 };
+
 export const ROUND_STATUSES = [
   { id: 'pending', name: '待安排' },
   { id: 'scheduled', name: '已约' },

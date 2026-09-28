@@ -76,6 +76,14 @@ export function markApplied(id) {
   });
 }
 
+// 查过进度、还在流程里：重新开始计时
+export function keepWaiting(id) {
+  editApp(id, (a) => {
+    a.lastActivityAt = now();
+  });
+  toast('已重新计时，之后还没动静会再标出来');
+}
+
 // 结果已知时直接关闭，不再弹窗选择
 export function closeApp(id, outcome) {
   editApp(id, (a) => moveApp(a, 'closed', outcome));
@@ -83,17 +91,23 @@ export function closeApp(id, outcome) {
 
 // —— 流程节点 ——
 
-function editRound(appId, roundId, mutate) {
+// activity：这次改动算不算「有进展」（改状态、改时间算；改名字、备注不算）
+function editRound(appId, roundId, mutate, { activity = false } = {}) {
   editApp(appId, (app) => {
     const round = app.rounds.find((r) => r.id === roundId);
     if (!round) return;
     mutate(round);
+    if (activity) app.lastActivityAt = now();
     syncPhaseFromRounds(app);
   });
 }
 
+// 临时多出一轮通常意味着对方有了新通知，也算有进展
 export function insertRound(appId, index, type) {
-  editApp(appId, (app) => app.rounds.splice(index, 0, newRound(type)));
+  editApp(appId, (app) => {
+    app.rounds.splice(index, 0, newRound(type));
+    app.lastActivityAt = now();
+  });
 }
 
 export function updateRound(appId, roundId, patch) {
@@ -102,10 +116,15 @@ export function updateRound(appId, roundId, patch) {
 
 // 给「待安排」的轮次填上时间，就当作已经约好了
 export function setRoundTime(appId, roundId, scheduledAt) {
-  editRound(appId, roundId, (r) => {
-    r.scheduledAt = scheduledAt;
-    if (scheduledAt && r.status === 'pending') r.status = 'scheduled';
-  });
+  editRound(
+    appId,
+    roundId,
+    (r) => {
+      r.scheduledAt = scheduledAt;
+      if (scheduledAt && r.status === 'pending') r.status = 'scheduled';
+    },
+    { activity: true },
+  );
 }
 
 export function changeRoundType(appId, roundId, type) {
@@ -113,7 +132,7 @@ export function changeRoundType(appId, roundId, type) {
 }
 
 export async function setRoundStatus(appId, roundId, status) {
-  updateRound(appId, roundId, { status });
+  editRound(appId, roundId, (r) => Object.assign(r, { status }), { activity: true });
   const app = store.findApp(appId);
   const round = app?.rounds.find((r) => r.id === roundId);
   if (status !== 'failed' || !round || app.phase === 'closed') return;

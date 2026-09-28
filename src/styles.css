@@ -410,6 +410,29 @@ input[type='file'] {
   font-variant-numeric: tabular-nums;
 }
 
+.stat-toggle {
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+}
+
+.stat-toggle:hover {
+  border-color: var(--muted);
+}
+
+.stat-warn .stat-value {
+  color: var(--warn);
+}
+
+.stat-toggle.active {
+  background: var(--warn-weak);
+  border-color: var(--warn);
+}
+
+.stat-toggle.active .stat-hint {
+  color: var(--warn);
+}
+
 .board {
   flex: 1;
   min-height: 0;
@@ -630,6 +653,11 @@ input[type='file'] {
 .tag-outcome-declined {
   background: var(--success-weak);
   color: var(--success);
+}
+
+.tag-stale {
+  background: var(--warn-weak);
+  color: var(--warn);
 }
 
 /* —— 近 7 天 —— */
@@ -869,6 +897,41 @@ input[type='file'] {
 
 .drawer-phase select {
   width: auto;
+}
+
+.stale-notice {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px 12px;
+  margin-top: -8px;
+  padding: 10px 12px;
+  background: var(--warn-weak);
+  border: 1px solid color-mix(in srgb, var(--warn) 35%, var(--border));
+  border-radius: 8px;
+  font-size: 13px;
+}
+
+.stale-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.stale-text b {
+  color: var(--warn);
+}
+
+.stale-text span {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.stale-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
 }
 
 .phase-select {

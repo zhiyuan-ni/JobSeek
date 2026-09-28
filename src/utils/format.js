@@ -41,12 +41,16 @@ export function fmtTimestamp(iso) {
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
 }
 
-export function daysUntil(dateStr) {
-  const [y, m, d] = dateStr.split('-').map(Number);
-  const start = new Date();
-  start.setHours(0, 0, 0, 0);
-  return Math.round((new Date(y, m - 1, d) - start) / 86_400_000);
+// 两个 'YYYY-MM-DD' 之间差几天（按日历日算，不受夏令时影响）
+export function daysBetween(fromKey, toKey) {
+  const utc = (key) => {
+    const [y, m, d] = key.split('-').map(Number);
+    return Date.UTC(y, m - 1, d);
+  };
+  return Math.round((utc(toKey) - utc(fromKey)) / 86_400_000);
 }
+
+export const daysUntil = (dateKey) => daysBetween(today(), dateKey);
 
 // datetime-local 的值不带时区，按本地时间解析
 export const hoursUntil = (value) => (new Date(value) - Date.now()) / 3_600_000;
