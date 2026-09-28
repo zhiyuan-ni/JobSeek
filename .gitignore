@@ -1,0 +1,7 @@
+node_modules/
+dist/
+.DS_Store
+*.log
+
+# 个人数据：投递记录、简历和 JD 的 PDF、每日备份
+data/
