@@ -1,15 +1,17 @@
 import * as actions from '../actions.js';
 import * as store from '../store.js';
+import { buildAgenda } from '../model/agenda.js';
 import { currentRound, reachedIndex, roundLabel } from '../model/application.js';
 import { CATEGORIES, COLUMNS, OUTCOMES, PRIORITIES, ROUND_STATUSES, WISHES, columnIndex, nameOf } from '../model/constants.js';
 import { h, options, patchChildren, selectEl } from '../ui/dom.js';
 import { daysUntil, fmtDate, fmtDateTime, hoursUntil } from '../utils/format.js';
+import { renderAgenda } from './agenda.js';
 import { openDetail, openedId } from './detail.js';
 import { openNewAppModal } from './newApp.js';
 
 const FILTER_KEY = 'jobseek.boardFilters';
 const DRAG_TYPE = 'application/x-jobseek-app';
-const DEFAULT_FILTERS = { q: '', category: '', priority: '', resumeId: '', collapseClosed: false };
+const DEFAULT_FILTERS = { q: '', category: '', priority: '', resumeId: '', collapseClosed: false, collapseAgenda: false };
 
 function loadFilters() {
   try {
@@ -28,6 +30,7 @@ function saveFilters(filters) {
 export function mountBoard(root) {
   const filters = loadFilters();
   const stats = h('div', { class: 'stats' });
+  const agenda = h('div', { class: 'agenda-slot' });
   const board = h('div', { class: 'board' });
 
   const setFilter = (patch) => {
@@ -37,17 +40,35 @@ export function mountBoard(root) {
   };
 
   function render() {
-    const apps = store.getState().applications.filter((a) => matches(a, filters));
+    const all = store.getState().applications;
+    const apps = all.filter((a) => matches(a, filters));
     patchChildren(stats, renderStats(apps));
+    // 提醒不受筛选影响，免得筛掉了就漏看
+    patchChildren(
+      agenda,
+      renderAgenda(buildAgenda(all), {
+        collapsed: filters.collapseAgenda,
+        onToggle: () => setFilter({ collapseAgenda: !filters.collapseAgenda }),
+      }),
+    );
     patchChildren(
       board,
       COLUMNS.map((col) => renderColumn(col, apps.filter((a) => a.phase === col.id), filters, setFilter)),
     );
   }
 
-  root.replaceChildren(renderToolbar(filters, setFilter), stats, board);
+  root.replaceChildren(renderToolbar(filters, setFilter), stats, agenda, board);
   render();
-  return store.subscribe(render);
+
+  // 时间在走：每分钟重算日程和「48 小时内」高亮；正在拖卡片时跳过，免得打断
+  const timer = setInterval(() => {
+    if (!document.querySelector('.card.dragging')) render();
+  }, 60_000);
+  const unsubscribe = store.subscribe(render);
+  return () => {
+    unsubscribe();
+    clearInterval(timer);
+  };
 }
 
 function matches(app, f) {
@@ -216,11 +237,12 @@ function renderCard(app) {
 
 function renderRoundLine(round) {
   const scheduled = round.status === 'scheduled' && round.scheduledAt;
-  const hours = scheduled ? hoursUntil(round.scheduledAt) : -1;
-  const text = scheduled ? fmtDateTime(round.scheduledAt) : nameOf(ROUND_STATUSES, round.status);
+  const hours = scheduled ? hoursUntil(round.scheduledAt) : NaN;
+  let text = scheduled ? fmtDateTime(round.scheduledAt) : nameOf(ROUND_STATUSES, round.status);
+  if (hours < 0) text += ' · 待更新结果';
   return h(
     'div',
-    { class: ['card-round', `s-${round.status}`, hours >= 0 && hours <= 48 && 'soon'] },
+    { class: ['card-round', `s-${round.status}`, hours >= 0 && hours <= 48 && 'soon', hours < 0 && 'overdue'] },
     h('span', { class: 'status-dot' }),
     `${roundLabel(round)} · ${text}`,
   );

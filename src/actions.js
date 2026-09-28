@@ -68,6 +68,19 @@ export async function moveToColumn(id, column) {
   editApp(id, (a) => moveApp(a, column, outcome));
 }
 
+// 过了截止日才想起来标记：投递日期按截止日记（实际只会更早）
+export function markApplied(id) {
+  editApp(id, (a) => {
+    if (!a.appliedAt && a.deadline) a.appliedAt = a.deadline;
+    moveApp(a, 'applied');
+  });
+}
+
+// 结果已知时直接关闭，不再弹窗选择
+export function closeApp(id, outcome) {
+  editApp(id, (a) => moveApp(a, 'closed', outcome));
+}
+
 // —— 流程节点 ——
 
 function editRound(appId, roundId, mutate) {
@@ -85,6 +98,14 @@ export function insertRound(appId, index, type) {
 
 export function updateRound(appId, roundId, patch) {
   editRound(appId, roundId, (r) => Object.assign(r, patch));
+}
+
+// 给「待安排」的轮次填上时间，就当作已经约好了
+export function setRoundTime(appId, roundId, scheduledAt) {
+  editRound(appId, roundId, (r) => {
+    r.scheduledAt = scheduledAt;
+    if (scheduledAt && r.status === 'pending') r.status = 'scheduled';
+  });
 }
 
 export function changeRoundType(appId, roundId, type) {

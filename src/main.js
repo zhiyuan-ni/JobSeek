@@ -1,4 +1,5 @@
 import './styles.css';
+import { buildAgenda } from './model/agenda.js';
 import * as store from './store.js';
 import { h } from './ui/dom.js';
 import { mountBoard } from './views/board.js';
@@ -72,6 +73,19 @@ async function start() {
   });
   window.addEventListener('hashchange', route);
   route();
+
+  store.subscribe(updateTitle);
+  setInterval(updateTitle, 60_000);
+  updateTitle();
+}
+
+// 标签页标题带上「今天还有几项 + 几项待更新」，切到别的页面也能看到
+const BASE_TITLE = document.title;
+
+function updateTitle() {
+  const { todayCount, attentionCount } = buildAgenda(store.getState().applications);
+  const n = todayCount + attentionCount;
+  document.title = n ? `(${n}) ${BASE_TITLE}` : BASE_TITLE;
 }
 
 start();

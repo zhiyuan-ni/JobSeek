@@ -589,6 +589,10 @@ input[type='file'] {
   font-weight: 600;
 }
 
+.card-round.overdue {
+  color: var(--warn);
+}
+
 .card-tags {
   display: flex;
   flex-wrap: wrap;
@@ -626,6 +630,182 @@ input[type='file'] {
 .tag-outcome-declined {
   background: var(--success-weak);
   color: var(--success);
+}
+
+/* —— 近 7 天 —— */
+
+.agenda {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 8px 12px 12px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+}
+
+.agenda.collapsed {
+  padding-bottom: 8px;
+}
+
+.agenda-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.agenda-header h2 {
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.agenda-summary {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.agenda-warn {
+  padding: 0 8px;
+  border-radius: 10px;
+  background: var(--warn-weak);
+  color: var(--warn);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.agenda-header .icon-btn {
+  margin-left: auto;
+}
+
+.agenda-attention {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.attention-item {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 6px 4px 10px;
+  background: var(--warn-weak);
+  border: 1px solid color-mix(in srgb, var(--warn) 35%, var(--border));
+  border-radius: 8px;
+  font-size: 12px;
+}
+
+.attention-link {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.attention-link:hover {
+  color: var(--accent);
+}
+
+.attention-meta {
+  color: var(--muted);
+}
+
+.attention-item .btn-small {
+  padding: 1px 8px;
+}
+
+.agenda-days {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(120px, 1fr));
+  gap: 8px;
+  overflow-x: auto;
+}
+
+.agenda-day {
+  min-width: 0;
+  padding: 6px 8px 8px;
+  background: var(--surface-2);
+  border: 1px solid transparent;
+  border-radius: 8px;
+}
+
+.agenda-day.today {
+  background: var(--accent-weak);
+  border-color: color-mix(in srgb, var(--accent) 45%, transparent);
+}
+
+.agenda-day-head {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  margin-bottom: 4px;
+  font-size: 12px;
+}
+
+.agenda-day-head span {
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.agenda-items {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  max-height: 84px;
+  margin: 0;
+  padding: 0;
+  overflow-y: auto;
+  list-style: none;
+}
+
+.agenda-item {
+  display: flex;
+  gap: 6px;
+  width: 100%;
+  padding: 2px 6px;
+  background: var(--surface);
+  border: 0;
+  border-left: 3px solid var(--col, var(--muted));
+  border-radius: 4px;
+  font-size: 12px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.agenda-item:hover {
+  background: var(--surface-3);
+}
+
+.agenda-item.is-deadline {
+  --col: var(--danger);
+}
+
+.agenda-item.is-deadline .agenda-time {
+  color: var(--danger);
+}
+
+.agenda-time {
+  flex: none;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.agenda-text {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.agenda-none {
+  padding: 2px 6px;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.agenda-empty {
+  color: var(--muted);
+  font-size: 12px;
 }
 
 /* —— 详情抽屉 —— */
@@ -793,6 +973,21 @@ input[type='file'] {
 
 .round.current {
   background: var(--accent-weak);
+}
+
+/* 从日程点进来时，闪一下对应的那一轮 */
+.round.flash {
+  animation: round-flash 1.6s ease-out;
+}
+
+@keyframes round-flash {
+  0%,
+  35% {
+    box-shadow: 0 0 0 3px var(--accent);
+  }
+  100% {
+    box-shadow: 0 0 0 3px transparent;
+  }
 }
 
 .round.s-cancelled .round-name {

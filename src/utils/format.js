@@ -1,8 +1,23 @@
 const pad = (n) => String(n).padStart(2, '0');
 
-export function today() {
-  const d = new Date();
+// 本地日期 'YYYY-MM-DD'
+export function today(d = new Date()) {
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+}
+
+// 本地时间 'YYYY-MM-DDTHH:mm'，和 datetime-local 的值同格式，可以直接比较字符串
+export const localDateTime = (d = new Date()) => `${today(d)}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+
+export function addDays(dateKey, n) {
+  const [y, m, d] = dateKey.split('-').map(Number);
+  return today(new Date(y, m - 1, d + n));
+}
+
+const WEEKDAYS = ['周日', '周一', '周二', '周三', '周四', '周五', '周六'];
+
+export function weekday(dateKey) {
+  const [y, m, d] = dateKey.split('-').map(Number);
+  return WEEKDAYS[new Date(y, m - 1, d).getDay()];
 }
 
 // '2026-10-01' → '10/01'

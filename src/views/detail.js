@@ -24,7 +24,8 @@ let panel = null;
 
 export const openedId = () => panel?.id ?? null;
 
-export function openDetail(id) {
+// roundId：打开后滚动到这一轮并闪一下（从日程点进来时用）
+export function openDetail(id, { roundId } = {}) {
   if (!store.findApp(id)) return;
   if (!panel) {
     const body = h('div', { class: 'drawer-body' });
@@ -39,6 +40,15 @@ export function openDetail(id) {
   render();
   markSelected(id);
   if (!location.hash || location.hash.startsWith('#/board')) history.replaceState(null, '', `#/board/${id}`);
+  if (roundId) revealRound(roundId);
+}
+
+function revealRound(roundId) {
+  const el = panel.body.querySelector(`.round[data-round-id="${CSS.escape(roundId)}"]`);
+  if (!el) return;
+  el.scrollIntoView({ block: 'center' });
+  el.classList.add('flash');
+  el.addEventListener('animationend', () => el.classList.remove('flash'), { once: true });
 }
 
 export function closeDetail() {
@@ -315,7 +325,7 @@ function renderRound(app, round, index, isCurrent) {
 
   return h(
     'li',
-    { class: ['round', `s-${round.status}`, isCurrent && 'current'] },
+    { class: ['round', `s-${round.status}`, isCurrent && 'current'], dataset: { roundId: round.id } },
     h('span', { class: 'round-index' }, index + 1),
     h(
       'div',
@@ -357,9 +367,9 @@ function renderRound(app, round, index, isCurrent) {
       h('input', {
         type: 'datetime-local',
         value: round.scheduledAt,
-        title: '时间',
+        title: '时间（填上后「待安排」会自动变成「已约」）',
         'data-key': key('time'),
-        onchange: (e) => update({ scheduledAt: e.target.value }),
+        onchange: (e) => actions.setRoundTime(app.id, round.id, e.target.value),
       }),
       round.type === 'custom' &&
         selectEl(options(ROUND_COLUMNS), round.column, {
