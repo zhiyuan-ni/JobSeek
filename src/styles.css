@@ -616,6 +616,13 @@ input[type='file'] {
   color: var(--warn);
 }
 
+.card-round-text {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .card-tags {
   display: flex;
   flex-wrap: wrap;
@@ -1243,7 +1250,7 @@ input[type='file'] {
 
 .tpl-round {
   display: grid;
-  grid-template-columns: 22px minmax(0, 1fr) 130px 84px auto;
+  grid-template-columns: 22px minmax(0, 1fr) 130px 104px auto;
   align-items: center;
   gap: 6px;
 }

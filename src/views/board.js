@@ -271,13 +271,14 @@ function renderCard(app) {
 function renderRoundLine(round) {
   const scheduled = round.status === 'scheduled' && round.scheduledAt;
   const hours = scheduled ? hoursUntil(round.scheduledAt) : NaN;
-  let text = scheduled ? fmtDateTime(round.scheduledAt) : nameOf(ROUND_STATUSES, round.status);
-  if (hours < 0) text += ' · 待更新结果';
+  let text = `${roundLabel(round)} · ${scheduled ? fmtDateTime(round.scheduledAt) : nameOf(ROUND_STATUSES, round.status)}`;
+  if (hours < 0) text += ' · 待更新';
+  // 卡片窄，放不下就省略，完整内容放在悬停提示里
   return h(
     'div',
-    { class: ['card-round', `s-${round.status}`, hours >= 0 && hours <= 48 && 'soon', hours < 0 && 'overdue'] },
+    { class: ['card-round', `s-${round.status}`, hours >= 0 && hours <= 48 && 'soon', hours < 0 && 'overdue'], title: text },
     h('span', { class: 'status-dot' }),
-    `${roundLabel(round)} · ${text}`,
+    h('span', { class: 'card-round-text' }, text),
   );
 }
 
